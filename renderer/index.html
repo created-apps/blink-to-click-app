@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eye Gaze Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;800&display=swap"
+    rel="stylesheet"
+  />
+  <!-- MediaPipe Face Mesh via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ── Sidebar ─────────────────────────── -->
+    <aside id="sidebar">
+      <div id="brand">
+        <svg class="brand-eye" viewBox="0 0 40 24" fill="none">
+          <ellipse cx="20" cy="12" rx="19" ry="11" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="20" cy="12" r="5.5" fill="currentColor" opacity="0.15" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="20" cy="12" r="2.5" fill="currentColor"/>
+          <circle cx="21.5" cy="10.5" r="1" fill="white" opacity="0.6"/>
+        </svg>
+        <span class="brand-name">GAZE<em>OS</em></span>
+      </div>
+
+      <div id="status-panel">
+        <div class="status-row">
+          <span class="status-label">ENGINE</span>
+          <span id="st-engine" class="status-badge badge-warn">INIT</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">ROBOT</span>
+          <span id="st-robot" class="status-badge badge-warn">CHECK</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">CAMERA</span>
+          <span id="st-camera" class="status-badge badge-warn">OFF</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">FACE</span>
+          <span id="st-face" class="status-badge badge-off">NONE</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">CONTROL</span>
+          <span id="st-control" class="status-badge badge-off">OFF</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">CALIB</span>
+          <span id="st-calib" class="status-badge badge-off">NO</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">AIM</span>
+          <span id="st-aim" class="status-badge badge-warn">ON</span>
+        </div>
+      </div>
+
+      <div id="metrics">
+        <div class="metric-row">
+          <span class="metric-label">FPS</span>
+          <span id="m-fps" class="metric-val">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">IRIS X</span>
+          <span id="m-ix" class="metric-val">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">IRIS Y</span>
+          <span id="m-iy" class="metric-val">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">L-EYE</span>
+          <span id="m-le" class="metric-val">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">R-EYE</span>
+          <span id="m-re" class="metric-val">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">DWELL</span>
+          <span id="m-dwell" class="metric-val">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">CURSOR</span>
+          <span id="m-cursor" class="metric-val">—</span>
+        </div>
+      </div>
+
+      <div id="actions-log">
+        <div class="log-title">EVENTS</div>
+        <div id="log-entries"></div>
+      </div>
+
+      <!-- Settings -->
+      <div id="settings-panel">
+        <div class="settings-title">SETTINGS</div>
+
+        <div class="setting-row">
+          <div class="setting-header">
+            <span class="setting-label">SMOOTH</span>
+            <span class="setting-val" id="sl-smooth-val">0.20</span>
+          </div>
+          <input type="range" id="sl-smooth" min="0.05" max="0.60" step="0.01" value="0.20" class="setting-slider">
+          <span class="setting-hint">Lower = more stable, Higher = more responsive</span>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-header">
+            <span class="setting-label">DWELL CLICK</span>
+            <span class="setting-val" id="sl-dwell-val">3.0s</span>
+          </div>
+          <input type="range" id="sl-dwell" min="0.5" max="5.0" step="0.5" value="3.0" class="setting-slider">
+          <span class="setting-hint">Seconds to hold gaze for auto-click</span>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-header">
+            <span class="setting-label">BLINK SENS</span>
+            <span class="setting-val" id="sl-blink-val">0.017</span>
+          </div>
+          <input type="range" id="sl-blink" min="0.008" max="0.035" step="0.001" value="0.017" class="setting-slider">
+          <span class="setting-hint">Higher = easier blink detection</span>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-header">
+            <span class="setting-label">AIM ASSIST</span>
+            <span class="setting-val" id="sl-aim-val">MED</span>
+          </div>
+          <input type="range" id="sl-aim" min="0" max="3" step="1" value="2" class="setting-slider">
+          <span class="setting-hint">Locks cursor when gaze is steady</span>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div id="ctrl-buttons">
+        <button id="btn-start" class="ctrl-btn btn-primary">▶ START CAMERA</button>
+        <button id="btn-calib" class="ctrl-btn btn-secondary" disabled>◈ CALIBRATE</button>
+        <button id="btn-toggle" class="ctrl-btn btn-accent" disabled>⏸ PAUSE</button>
+      </div>
+
+      <div id="hotkeys">
+        <div class="hk-row"><kbd>C</kbd> calibrate</div>
+        <div class="hk-row"><kbd>Space</kbd> record point</div>
+        <div class="hk-row"><kbd>P</kbd> pause / resume</div>
+        <div class="hk-row"><kbd>H</kbd> toggle HUD</div>
+        <div class="hk-row"><kbd>Esc</kbd> stop</div>
+      </div>
+    </aside>
+
+    <!-- ── Main Canvas Area ──────────────────── -->
+    <main id="main-area">
+
+      <!-- Calibration overlay -->
+      <div id="calib-overlay" class="hidden">
+        <div id="calib-content">
+          <div id="calib-step-label">CALIBRATION</div>
+          <div id="calib-instruction">Look at the <strong id="calib-point-name">—</strong> of your <em>monitor</em></div>
+          <div id="calib-progress-wrap">
+            <div id="calib-progress-bar"></div>
+          </div>
+          <div id="calib-counter">0 / 5</div>
+          <div id="calib-hint">Press <kbd>Space</kbd> when your gaze is steady on that screen position</div>
+        </div>
+        <!-- Corner targets rendered dynamically -->
+        <div id="calib-targets"></div>
+      </div>
+
+      <!-- Video + canvas -->
+      <div id="video-wrap">
+        <video id="webcam" autoplay playsinline muted></video>
+        <canvas id="overlay-canvas"></canvas>
+
+        <!-- HUD overlays on video -->
+        <div id="hud-top-right" class="hud-panel hidden">
+          <div id="hud-mode">MODE: <span id="hud-mode-val">—</span></div>
+        </div>
+
+        <div id="video-placeholder">
+          <div class="placeholder-icon">
+            <svg viewBox="0 0 80 60" fill="none">
+              <rect x="1" y="1" width="78" height="58" rx="6" stroke="currentColor" stroke-width="1.5" stroke-dasharray="6 4"/>
+              <circle cx="40" cy="28" r="14" stroke="currentColor" stroke-width="1.5"/>
+              <circle cx="40" cy="28" r="6" fill="currentColor" opacity="0.3"/>
+              <circle cx="40" cy="28" r="2.5" fill="currentColor"/>
+              <line x1="40" y1="46" x2="40" y2="52" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <p>Click <strong>START CAMERA</strong> to begin</p>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

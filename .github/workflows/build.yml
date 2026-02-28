@@ -1,0 +1,64 @@
+name: Build EyeGazeControl
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  # ── macOS build (.dmg) ───────────────────────────
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build macOS app
+        run: npm run build:mac
+        env:
+          # Skip code signing for now (unsigned DMG still works if user allows it)
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload .dmg artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EyeGazeControl-macOS
+          path: dist/*.dmg
+          if-no-files-found: error
+
+  # ── Windows build (.exe) ─────────────────────────
+  build-win:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Windows app
+        run: npm run build:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload .exe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EyeGazeControl-Windows
+          path: dist/*.exe
+          if-no-files-found: error
