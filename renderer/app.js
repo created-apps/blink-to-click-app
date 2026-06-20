@@ -593,15 +593,6 @@ document.addEventListener('keydown', e => {
 
 // ── Track last iris for space key ─────────────────
 let lastIrisX = null, lastIrisY = null;
-const _origOnResults = onResults;
-// Wrap to capture last iris
-let faceMesh_onResultsWrapper = function(results) {
-  if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-    lastIrisX = results.multiFaceLandmarks[0][IDX_IRIS_RIGHT].x;
-    lastIrisY = results.multiFaceLandmarks[0][IDX_IRIS_RIGHT].y;
-  }
-  onResults(results);
-};
 
 // ── Button events ─────────────────────────────────
 btnStart.addEventListener('click', () => {

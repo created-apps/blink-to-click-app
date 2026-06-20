@@ -1,7 +1,12 @@
 # GazeOS — Eye Gaze Mouse Control
 
 Cross-platform eye gaze mouse controller built with **Electron + MediaPipe JS + RobotJS**.
-Works on **Windows** and **macOS** from the same codebase
+Works on **Windows** and **macOS** from the same codebase.
+
+> **Internet required at runtime** — MediaPipe Face Mesh models are loaded from the jsDelivr CDN each time the app starts. Make sure you have an active connection before launching.
+
+---
+
 ## Features
 
 | Gesture | Action |
@@ -9,9 +14,87 @@ Works on **Windows** and **macOS** from the same codebase
 | 👁👁 Double-blink | Left click |
 | 😉 Left wink | Scroll up |
 | 😏 Right wink | Scroll down |
-| 😑 Dwell (default 3s) | Left click |
-| 😌 Dwell (default 5s) | Scroll down |
-| 😴 Long blink (0.4–1.2s) | Pause / resume control |
+| 😑 Dwell (default 3 s) | Left click |
+| 😌 Dwell (default 5 s) | Scroll down |
+| 😴 Long blink (0.4 – 1.2 s) | Pause / resume control |
+
+---
+
+## Running on Windows
+
+### Step 1 — Install prerequisites
+
+You need **Node.js 20 LTS** and **Visual Studio Build Tools** (required to compile the native mouse-control module `@jitsi/robotjs`).
+
+#### 1a. Install Node.js 20 LTS
+
+Download and run the installer from [nodejs.org](https://nodejs.org) — choose the **LTS** version.
+
+Verify in a new terminal:
+```cmd
+node --version    :: should print v20.x.x
+npm --version     :: should print 10.x.x
+```
+
+#### 1b. Install Visual Studio Build Tools (C++ compiler)
+
+`@jitsi/robotjs` is a native add-on that must be compiled from source. You need the MSVC toolchain.
+
+**Option A — winget (fastest):**
+```cmd
+winget install Microsoft.VisualStudio.2022.BuildTools
+```
+When the Visual Studio Installer opens, select **"Desktop development with C++"** and click Install.
+
+**Option B — manual download:**
+Download [Build Tools for Visual Studio 2022](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022), run the installer, and select the **"Desktop development with C++"** workload.
+
+After installation, verify that `cl.exe` is accessible by opening a **Developer Command Prompt for VS 2022** (not a regular terminal).
+
+> **Note:** Python is also required by `node-gyp` (the native build system). Node.js 20 ships with a bundled Python; if the build step fails with a Python error, install Python 3 from [python.org](https://www.python.org) and run `npm config set python python3`.
+
+---
+
+### Step 2 — Install dependencies and run
+
+Open a **regular PowerShell or Command Prompt** (not Developer Command Prompt — npm finds MSVC automatically):
+
+```cmd
+cd path\to\electron-eye-gaze
+
+:: Install and compile native modules (~2–5 min on first run)
+npm install
+
+:: Launch the app
+npm start
+```
+
+If `npm install` fails with a build error, see the Troubleshooting section below.
+
+---
+
+### Step 3 — Grant camera permission
+
+When you click **▶ START CAMERA** for the first time, Windows will show a permission prompt:
+
+> *"electron.exe wants to access your camera"*
+
+Click **Allow**. If you accidentally denied it:
+
+1. Open **Windows Settings → Privacy & Security → Camera**
+2. Scroll to **"Let desktop apps access your camera"** and make sure it is **On**
+3. Restart the app with `npm start`
+
+---
+
+### Step 4 — Use the app
+
+No Accessibility setup is needed on Windows — the app controls the mouse directly.
+
+1. Click **▶ START CAMERA** — webcam feed appears
+2. Click **◈ CALIBRATE** — follow the on-screen instructions (look at each corner, press `Space` to record)
+3. After calibration, click **▶ RESUME** to enable cursor control
+4. Your eyes now control the mouse
 
 ---
 
@@ -97,29 +180,12 @@ On first launch a dialog will guide you, but you must add it manually:
 
 ---
 
-## Running on Windows
-
-### Requirements
-- **Node.js 20 LTS** — download from https://nodejs.org
-- A webcam
-
-```bash
-cd path/to/electron-eye-gaze
-npm install
-npm start
-```
-
-Windows will show a camera permission prompt on first use — click **Allow**.
-No Accessibility setup is needed on Windows.
-
----
-
 ## Settings (live sliders — no restart needed)
 
 | Slider | Range | Description |
 |---|---|---|
 | **SMOOTH** | 0.05 – 0.60 | Cursor responsiveness. Lower = more stable, Higher = follows eye faster |
-| **DWELL CLICK** | 0.5 – 5.0s | How long to hold gaze before auto-clicking |
+| **DWELL CLICK** | 0.5 – 5.0 s | How long to hold gaze before auto-clicking |
 | **BLINK SENS** | 0.008 – 0.035 | Blink detection threshold. Raise if blinks aren't detected |
 | **AIM ASSIST** | OFF / LOW / MED / HIGH | Locks cursor when gaze is steady, making it easier to hit targets |
 
@@ -167,11 +233,12 @@ npm run build:mac
 > Without an Apple Developer ID certificate, macOS Gatekeeper will block the DMG on other Macs.
 > For personal/local use, right-click the app → Open → Open anyway to bypass Gatekeeper.
 
-### Windows installer
+### Windows installer (`.exe`)
 
-```bash
+```cmd
+:: Must be run on Windows with Visual Studio Build Tools installed
 npm run build:win
-# Output: dist/EyeGazeControl Setup <version>.exe
+:: Output: dist\EyeGazeControl Setup <version>.exe
 ```
 
 ---
@@ -194,12 +261,31 @@ entitlements.mac.plist   macOS hardened runtime entitlements (camera, network, a
 
 ## Troubleshooting
 
+### Windows
+
+| Problem | Fix |
+|---|---|
+| `npm install` fails: `MSBUILD : error MSB3428` | Visual Studio Build Tools with "Desktop development with C++" not installed — see Step 1b |
+| `npm install` fails: `python not found` | Install Python 3 from python.org, then run `npm config set python python3` and retry |
+| `npm install` fails: `gyp ERR! find VS` | Open the Visual Studio Installer and confirm the C++ workload is installed |
+| Camera badge shows `ERR` | Check **Settings → Privacy & Security → Camera** and ensure desktop apps can access it |
+| Mouse doesn't move after calibration | Restart the app — on Windows no extra permission is needed, so this usually means robotjs failed to load (check console) |
+| `ROBOT: FAIL` badge on startup | `@jitsi/robotjs` failed to load; re-run `npm install` in a terminal where MSVC is available |
+| App opens but camera shows black screen | Another app may be using the camera — close Teams, Zoom, or any other video app |
+| Face not detected (`FACE: NONE`) | Improve lighting — face a light source, avoid backlit backgrounds |
+| Cursor jitters too much | Lower the **SMOOTH** slider or increase **AIM ASSIST** to HIGH |
+| Blinks not detected | Raise the **BLINK SENS** slider |
+| MediaPipe won't load (`ENGINE: LOAD` stays forever) | No internet connection — MediaPipe models are fetched from CDN on startup |
+
+### macOS
+
 | Problem | Fix |
 |---|---|
 | `npm install` fails with build error | Run `xcode-select --install` then retry |
-| Camera badge shows `ERR` | Check System Settings → Privacy → Camera and allow the app |
-| Mouse doesn't move after calibration | Grant Accessibility permission (Step 4 above) and restart |
+| Camera badge shows `ERR` | Check **System Settings → Privacy & Security → Camera** and allow the app |
+| Mouse doesn't move after calibration | Grant Accessibility permission (Step 4) and restart |
 | Face not detected (`FACE: NONE`) | Improve lighting — face the light source, avoid backlight |
 | Cursor jitters too much | Lower the **SMOOTH** slider or increase **AIM ASSIST** to HIGH |
 | Blinks not detected | Raise the **BLINK SENS** slider |
 | App opens but camera shows black screen | Another app may be using the camera — close Teams/Zoom/FaceTime |
+| MediaPipe won't load (`ENGINE: LOAD` stays forever) | No internet connection — MediaPipe models are fetched from CDN on startup |

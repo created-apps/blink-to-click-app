@@ -23,14 +23,15 @@
     "files": [
       "main.js",
       "preload.js",
-      "renderer/**/*"
+      "renderer/**/*",
+      "assets/**/*"
     ],
     "mac": {
       "category": "public.app-category.utilities",
       "entitlements": "entitlements.mac.plist",
       "entitlementsInherit": "entitlements.mac.plist",
       "hardenedRuntime": true,
-      "icon": "assets/icon.icns",
+      "icon": "assets/icon.png",
       "target": [
         { "target": "dmg", "arch": ["universal"] }
       ],
@@ -41,7 +42,7 @@
     },
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.png"
     },
     "linux": {
       "target": "AppImage"
